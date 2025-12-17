@@ -1,5 +1,35 @@
 const Question = require("../models/Question");
 const UserProgress = require("../models/UserProgress");
+const DailyGoal = require("../models/DailyGoal");
+
+exports.getStreak = async (req, res) => {
+  const userId = req.user;
+
+  const goals = await DailyGoal.find({ userId }).sort({ date: -1 });
+
+  let streak = 0;
+
+  for (let i = 0; i < goals.length; i++) {
+    const date = goals[i].date;
+
+    const completedToday = await UserProgress.countDocuments({
+      userId,
+      status: "COMPLETED",
+      updatedAt: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000),
+      },
+    });
+
+    if (completedToday >= goals[i].targetCount) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  res.json({ streak });
+};
 
 exports.getDashboardData = async (req, res) => {
   const userId = req.user;
